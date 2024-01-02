@@ -1,10 +1,10 @@
 import Part from './Part'
 
-const Content = ({ content }) => {
+const Content = ({ parts }) => {
     return (
         <>
             {
-                content.map((e, i) => <Part key={i} e={e}/>)
+                parts.map((e, i) => <Part key={i} e={e}/>)
             } 
         </>
     )
