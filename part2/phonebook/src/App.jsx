@@ -84,11 +84,11 @@ const App = () => {
         <div>
             <h2>Phonebook</h2>
             <Notification message={notif.msg} type={notif.type} /> 
-            <Filter value={filter} handler={handleFilterChange} />
- 
+            <Filter value={filter} onChange={handleFilterChange} />
+
             <h2>add a new</h2>
             <PersonForm 
-                addPerson={addPerson}
+                onSubmit={addPerson}
                 nameVal={newName}
                 onNameChange={handleNameChange}
                 numVal={newNumber}
