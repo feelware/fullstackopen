@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import pService from './services/persons'
+import service from './services/persons'
 import Filter from './components/Filter'
 import PersonForm from './components/PersonForm'
 import Persons from './components/Persons'
@@ -19,7 +19,7 @@ const App = () => {
     const checkRepeated = per => persons.map(p => p.name.toLowerCase()).find(p => p === per.toLowerCase())
     
     useEffect(() => {
-        pService.getAll()
+        service.getAll()
             .then(initPersons => {
                 setPersons(initPersons)
             })
@@ -28,40 +28,15 @@ const App = () => {
     const addPerson = (e) => {
         e.preventDefault()
         if (checkRepeated(newName)) {
-            if (confirm(`${newName} is already added to phonebook, replace the old number with a new one?`)) {
-                const person = persons.find(p => p.name === newName)
-                const newPerson = {...person, number: newNumber}
-                pService
-                    .update(newPerson)
-                    .then(returnedPerson => {
-                        setPersons(persons.map(p => p.id === newPerson.id ? returnedPerson : p))
-                        setNewName('')
-                        setNewNumber('')
-                        setNotif({
-                            msg: `Added ${newPerson.name} to the phonebook`,
-                            type: 'success'
-                        })
-                        setTimeout(() => {setNotif({})}, 5000)
-                    })
-                    .catch(() => {
-                        setPersons(persons.filter(p => p.id !== newPerson.id))
-                        setNotif({
-                            msg: `${newPerson.name} was already deleted from the phonebook`,
-                            type: 'error'
-                        })
-                        setTimeout(() => {setNotif({})}, 5000)
-                    })
+            if (!confirm(`${newName} is already added to phonebook, replace the old number with a new one?`)) {
+                return
             }
-        }
-        else {
-            const newPerson = {
-                name: newName,
-                number: newNumber
-            }
-            pService
-                .create(newPerson)
+            const person = persons.find(p => p.name === newName)
+            const newPerson = {...person, number: newNumber}
+            return service
+                .update(newPerson)
                 .then(returnedPerson => {
-                    setPersons(persons.concat(returnedPerson))
+                    setPersons(persons.map(p => p.id === newPerson.id ? returnedPerson : p))
                     setNewName('')
                     setNewNumber('')
                     setNotif({
@@ -70,14 +45,55 @@ const App = () => {
                     })
                     setTimeout(() => {setNotif({})}, 5000)
                 })
+                .catch(error => {
+                    if (error.response.data.type === 'ValidationError') {
+                        setNotif({
+                            msg: `${error.response.data.error}`,
+                            type: 'error'
+                        })
+                        return setTimeout(() => {setNotif({})}, 5000)
+                    }
+                    setPersons(persons.filter(p => p.id !== newPerson.id))
+                    setNotif({
+                        msg: `${newPerson.name} was already deleted from the phonebook`,
+                        type: 'error'
+                    })
+                    setTimeout(() => {setNotif({})}, 5000)
+                })
         }
+
+        const newPerson = {
+            name: newName,
+            number: newNumber
+        }
+
+        service
+            .create(newPerson)
+            .then(returnedPerson => {
+                setPersons(persons.concat(returnedPerson))
+                setNewName('')
+                setNewNumber('')
+                setNotif({
+                    msg: `Added ${newPerson.name} to the phonebook`,
+                    type: 'success'
+                })
+                setTimeout(() => {setNotif({})}, 5000)
+            })
+            .catch(error => {
+                setNotif({
+                    msg: `${error.response.data.error}`,
+                    type: 'error'
+                })
+            })
     }
 
     const delPerson = (id, name) => {
-        if (window.confirm(`delete ${name}?`)) {
-            pService.del(id)
-            .then(setPersons(persons.filter(p => p.id !== id)))
+        if (!window.confirm(`delete ${name}?`)) {
+            return
         }
+        service
+            .del(id)
+            .then(setPersons(persons.filter(p => p.id !== id)))
     }
 
     return (
