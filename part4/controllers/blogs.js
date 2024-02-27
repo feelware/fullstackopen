@@ -1,5 +1,6 @@
 const blogsRouter = require('express').Router()
 const Blog = require('../models/blog')
+const User = require('../models/user')
 const { userExtractor } = require('../utils/middleware')
 
 blogsRouter.get('/', async (req, res) => {
@@ -10,6 +11,7 @@ blogsRouter.get('/', async (req, res) => {
 
 blogsRouter.get('/:id', async (req, res) => {
   const blog = await Blog.findById(req.params.id)
+    .populate('user', { username: 1, name: 1 })
   blog
     ? res.json(blog)
     : res.status(404).json({
@@ -39,15 +41,25 @@ blogsRouter.delete('/:id', userExtractor, async (req, res) => {
     })
   }
 
-  const user = req.user
+  const userInfo = req.user
 
-  if (blogToDelete.user.toString() !== user._id.toString()) {
+  if (blogToDelete.user.toString() !== userInfo._id.toString()) {
     return res.status(401).json({
       error: 'unauthorized user'
     })
   }
 
+  // remove from user blog list
+  const user = await User.findById(userInfo._id)
+  const userBlogs = user.blogs.map(blog => blog.toString())
+
+  await User.findByIdAndUpdate(userInfo._id, {
+    blogs: userBlogs.filter(blog => blog !== req.params.id)
+  })
+
+  // delete blog
   await Blog.findByIdAndDelete(req.params.id)
+
   res.status(204).end()
 })
 
@@ -61,23 +73,26 @@ blogsRouter.put('/:id', userExtractor, async (req, res) => {
   }
 
   const user = req.user
+  const update = req.body
 
-  if (blogToUpdate.user.toString() !== user._id.toString()) {
+  const likesOnly = Object.keys(update)[0] === 'likes'
+
+  if (blogToUpdate.user.toString() !== user._id.toString() && !likesOnly) {
     return res.status(401).json({
       error: 'unauthorized user'
     })
   }
 
-  const blog = req.body
+  const options = {
+    new: true,
+    runValidators: true,
+    context: 'query'
+  }
 
   const updatedBlog = await Blog.findByIdAndUpdate(
     req.params.id,
-    blog,
-    {
-      new: true,
-      runValidators: true,
-      context: 'query'
-    }
+    update,
+    options
   )
 
   res.status(201).json(updatedBlog)

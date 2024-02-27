@@ -1,10 +1,26 @@
 const mongoose = require('mongoose')
 const supertest = require('supertest')
 const api = supertest(require('../app'))
-const testBlogs = require('./blogs_for_testing')
 const Blog = require('../models/blog')
 const User = require('../models/user')
 const helper = require('../utils/test_helper')
+const initialBlogs = [
+  {
+    title: 'React patterns',
+    author: 'Michael Chan',
+    url: 'https://reactpatterns.com/'
+  },
+  {
+    title: 'Go To Statement Considered Harmful',
+    author: 'Edsger W. Dijkstra',
+    url: 'http://www.u.arizona.edu/~rubinson/copyright_violations/Go_To_Considered_Harmful.html'
+  }
+]
+const newBlog = {
+  title: 'Test blog',
+  author: 'Test Author',
+  url: 'http://test.url'
+}
 
 let testToken
 
@@ -15,7 +31,7 @@ describe('when fetching all blog posts from api', () => {
       .expect(200)
       .expect('Content-Type', /application\/json/)
 
-    expect(response.body).toHaveLength(testBlogs.length)
+    expect(response.body).toHaveLength(initialBlogs.length)
   }, 100000)
 
   test('all posts have an id property', async () => {
@@ -32,13 +48,6 @@ describe('when sending a new blog post to api', () => {
   test('it is saved correctly if correctly formatted', async () => {
     const blogsAtStart = await helper.blogsInDb()
 
-    const newBlog = {
-      title: 'Test blog',
-      author: 'Test Author',
-      url: 'http://test.url',
-      likes: 0
-    }
-
     await api
       .post('/api/blogs')
       .set('Authorization', `bearer ${testToken}`)
@@ -46,42 +55,29 @@ describe('when sending a new blog post to api', () => {
       .expect(201)
       .expect('Content-Type', /application\/json/)
 
-    const response = await helper.blogsInDb()
-    expect(response).toHaveLength(blogsAtStart.length + 1)
+    const blogsAtEnd = await helper.blogsInDb()
+    expect(blogsAtEnd).toHaveLength(blogsAtStart.length + 1)
 
-    const titles = response.map(blog => blog.title)
+    const titles = blogsAtEnd.map(blog => blog.title)
     expect(titles).toContain('Test blog')
   }, 100000)
 
   test('401 is returned if token is missing', async () => {
-    const newBlog = {
-      title: 'Test blog',
-      author: 'Test Author',
-      url: 'http://test.url',
-      likes: 0
-    }
-
     await api
       .post('/api/blogs')
       .send(newBlog)
       .expect(401)
   })
 
-  test('likes property defaults to 0 when not specified', async () => {
-    const blogNoLikes = {
-      title: 'Test blog',
-      author: 'Test Author',
-      url: 'http://test.url'
-    }
-
+  test('likes property defaults to empty array when not specified', async () => {
     const response = await api
       .post('/api/blogs')
       .set('Authorization', `bearer ${testToken}`)
-      .send(blogNoLikes)
+      .send(newBlog)
       .expect(201)
       .expect('Content-Type', /application\/json/)
 
-    expect(response.body.likes).toBe(0)
+    expect(response.body.likes).toEqual([])
   })
 
   test('400 is returned if title or url is missing', async () => {
@@ -114,12 +110,7 @@ describe('when deleting a blog post from api', () => {
     const blogToDelete = await api
       .post('/api/blogs')
       .set('Authorization', `bearer ${testToken}`)
-      .send({
-        title: 'Test blog',
-        author: 'Test Author',
-        url: 'http://test.url',
-        likes: 0
-      })
+      .send(newBlog)
 
     const blogsAtStart = await helper.blogsInDb()
 
@@ -139,12 +130,7 @@ describe('when deleting a blog post from api', () => {
     const blogToDelete = await api
       .post('/api/blogs')
       .set('Authorization', `bearer ${testToken}`)
-      .send({
-        title: 'Test blog',
-        author: 'Test Author',
-        url: 'http://test.url',
-        likes: 0
-      })
+      .send(newBlog)
 
     await api
       .delete(`/api/blogs/${blogToDelete.body.id}`)
@@ -171,42 +157,28 @@ describe('when updating a blog post from api', () => {
     let blogToUpdate = await api
       .post('/api/blogs')
       .set('Authorization', `bearer ${testToken}`)
-      .send({
-        title: 'Test blog',
-        author: 'Test Author',
-        url: 'http://test.url',
-        likes: 0
-      })
+      .send(newBlog)
 
     blogToUpdate = blogToUpdate.body
 
     await api
       .put(`/api/blogs/${blogToUpdate.id}`)
       .set('Authorization', `bearer ${testToken}`)
-      .send({
-        likes: blogToUpdate.likes + 1
-      })
+      .send({ url: 'http://example.com' })
 
     const updatedBlog = await api.get(`/api/blogs/${blogToUpdate.id}`)
-    expect(updatedBlog.body.likes).toBe(blogToUpdate.likes + 1)
+    expect(updatedBlog.body.url).toBe('http://example.com')
   }, 100000)
 
   test('401 is returned if token is missing', async () => {
     const blogToUpdate = await api
       .post('/api/blogs')
       .set('Authorization', `bearer ${testToken}`)
-      .send({
-        title: 'Test blog',
-        author: 'Test Author',
-        url: 'http://test.url',
-        likes: 0
-      })
+      .send({ url: 'http://othertest.url' })
 
     await api
       .put(`/api/blogs/${blogToUpdate.body.id}`)
-      .send({
-        likes: blogToUpdate.likes + 1
-      })
+      .send({ url: 'http://example.com' })
       .expect(401)
   })
 
@@ -214,9 +186,7 @@ describe('when updating a blog post from api', () => {
     await api
       .put('/api/blogs/65cbe5313494931419d312a7')
       .set('Authorization', `bearer ${testToken}`)
-      .send({
-        likes: 0
-      })
+      .send({ url: 'http://othertest.url' })
       .expect(404)
   })
 
@@ -224,9 +194,7 @@ describe('when updating a blog post from api', () => {
     await api
       .put('/api/blogs/invalid_id')
       .set('Authorization', `bearer ${testToken}`)
-      .send({
-        likes: 0
-      })
+      .send({ url: 'http://othertest.url' })
       .expect(400)
   })
 })
@@ -252,7 +220,7 @@ beforeEach(async () => {
 
   await Blog.deleteMany({})
 
-  const blogPromises = testBlogs.map(testBlog => {
+  const blogPromises = initialBlogs.map(testBlog => {
     const newBlog = new Blog(testBlog)
     return newBlog.save()
   })

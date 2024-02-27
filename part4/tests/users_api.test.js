@@ -5,18 +5,20 @@ const User = require('../models/user')
 const helper = require('../utils/test_helper')
 
 describe('when there is initially one user in db', () => {
+  let usersAtStart, ogUserId
+
   beforeEach(async () => {
     await User.deleteMany({})
 
     const passwordHash = await bcrypt.hash('sekret', 10)
-    const user = new User({ username: 'root', passwordHash })
+    const initialUser = new User({ username: 'root', passwordHash })
+    const response = await initialUser.save()
+    ogUserId = response._id
 
-    await user.save()
+    usersAtStart = await helper.usersInDb()
   })
 
   test('creation succeeds with a fresh username', async () => {
-    const usersAtStart = await helper.usersInDb()
-
     const newUser = {
       username: 'mluukkai',
       name: 'Matti Luukkainen',
@@ -37,9 +39,7 @@ describe('when there is initially one user in db', () => {
   })
 
   test('creation fails with proper statuscode and message if username already taken', async () => {
-    const usersAtStart = await helper.usersInDb()
-
-    const newUser = {
+    const userRepeated = {
       username: 'root',
       name: 'Superuser',
       password: 'salainen'
@@ -47,7 +47,7 @@ describe('when there is initially one user in db', () => {
 
     const result = await api
       .post('/api/users')
-      .send(newUser)
+      .send(userRepeated)
       .expect(400)
       .expect('Content-Type', /application\/json/)
 
@@ -58,9 +58,7 @@ describe('when there is initially one user in db', () => {
   })
 
   test('creation fails if username is less than 3 characters', async () => {
-    const usersAtStart = await helper.usersInDb()
-
-    const newUser = {
+    const userShortUsername = {
       username: 'ro',
       name: 'Superuser',
       password: 'salainen'
@@ -68,7 +66,7 @@ describe('when there is initially one user in db', () => {
 
     const result = await api
       .post('/api/users')
-      .send(newUser)
+      .send(userShortUsername)
       .expect(400)
       .expect('Content-Type', /application\/json/)
 
@@ -79,9 +77,7 @@ describe('when there is initially one user in db', () => {
   })
 
   test('creation fails if password is less than 3 characters', async () => {
-    const usersAtStart = await helper.usersInDb()
-
-    const newUser = {
+    const userShortPassword = {
       username: 'root',
       name: 'Superuser',
       password: 'sa'
@@ -89,7 +85,7 @@ describe('when there is initially one user in db', () => {
 
     const result = await api
       .post('/api/users')
-      .send(newUser)
+      .send(userShortPassword)
       .expect(400)
       .expect('Content-Type', /application\/json/)
 
@@ -97,5 +93,23 @@ describe('when there is initially one user in db', () => {
 
     const usersAtEnd = await helper.usersInDb()
     expect(usersAtEnd).toEqual(usersAtStart)
+  })
+
+  test('updating a user succeeds if the user is authorized', async () => {
+    const credentials = await api
+      .post('/api/login')
+      .send({ username: 'root', password: 'sekret' })
+
+    const token = credentials.body.token
+
+    await api
+      .put(`/api/users/${ogUserId}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ username: 'superuser' })
+      .expect(201)
+      .expect('Content-Type', /application\/json/)
+
+    const updatedUser = await User.findById(ogUserId)
+    expect(updatedUser.username).toBe('superuser')
   })
 })
