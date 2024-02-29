@@ -18,16 +18,7 @@ describe('blog post component', () => {
     }
   }
 
-  const currUser = {
-    id: '0',
-    username: 'stevan',
-    likes: []
-  }
-
-  const handleLike = jest.fn((liked, blog) => () => {
-    console.log('liked: ', liked)
-    console.log('blog: ', blog)
-  })
+  const handleLike = jest.fn()
 
   beforeEach(() => {
     container = render(
@@ -44,7 +35,6 @@ describe('blog post component', () => {
   test('by default renders title & author, but not url or likes', () => {
     const heading = container.querySelector('.heading')
     expect(heading).toHaveTextContent('test title test author')
-
     const details = container.querySelector('.details')
     expect(details).toBeNull()
   })
@@ -54,7 +44,6 @@ describe('blog post component', () => {
 
     beforeEach(async () => {
       user = userEvent.setup()
-  
       const viewButton = screen.getByRole('button')
       await user.click(viewButton)
     })
@@ -65,8 +54,7 @@ describe('blog post component', () => {
       expect(details).toHaveTextContent('likes 0')
     })
 
-    test.only('when clicking like button twice, event handler is called twice', async () => {
-      screen.debug()
+    test('when clicking like button twice, event handler is called twice', async () => {
       const likeButton = screen.getByText('like')
       await user.click(likeButton)
       await user.click(likeButton)
@@ -74,4 +62,3 @@ describe('blog post component', () => {
     })
   })
 })
-

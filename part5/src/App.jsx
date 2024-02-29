@@ -89,7 +89,7 @@ const App = () => {
     }
   }
 
-  const handleLike = (liked, blog) => () => {
+  const handleLike = (liked, blog) => {
     const newLikes = liked
       ? blog.likes.filter(likingUser => likingUser !== user.id)
       : blog.likes.concat(user.id)

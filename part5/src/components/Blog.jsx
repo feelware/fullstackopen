@@ -2,7 +2,7 @@ import { useState } from 'react'
 import PropTypes from 'prop-types'
 
 const Blog = ({ blog, liked, isowner, handleLike, handleDel }) => {
-  const [visible, setVisible] = useState(false)
+  const [expanded, setExpanded] = useState(false)
 
   const blogStyle = {
     paddingTop: 10,
@@ -16,26 +16,26 @@ const Blog = ({ blog, liked, isowner, handleLike, handleDel }) => {
     <div className='blog' style={blogStyle}>
       <div className='heading'>
         {blog.title} {blog.author}
-        <button className='viewBlog' onClick={() => { setVisible(!visible) }}>
-          {visible ? 'hide' : 'view'}
+        <button className='viewBlog' onClick={() => { setExpanded(!expanded) }}>
+          {expanded ? 'hide' : 'view'}
         </button>
       </div>
       {
-        visible &&
-          <div className='details'>
-            <div>{blog.url}</div>
-            <div>
-              likes {blog.likes.length}
-              <button onClick={handleLike(liked, blog)}>
-                { liked ? 'liked' : 'like' }
-              </button>
-            </div>
-            <div>{blog.user.name || blog.user.username}</div>
-            {
-              isowner &&
-              <button onClick={handleDel(blog.id)}>remove</button>
-            }
+        expanded &&
+        <div className='details'>
+          <div>{blog.url}</div>
+          <div>
+            likes {blog.likes.length}
+            <button onClick={() => handleLike(liked, blog)}>
+              { liked ? 'liked' : 'like' }
+            </button>
           </div>
+          <div>{blog.user.name || blog.user.username}</div>
+          {
+            isowner &&
+            <button onClick={handleDel(blog.id)}>remove</button>
+          }
+        </div>
       }
     </div>
   )
