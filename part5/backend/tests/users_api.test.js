@@ -1,6 +1,6 @@
 const supertest = require('supertest')
 const api = supertest(require('../app'))
-const bcrypt = require('bcrypt')
+const bcrypt = require('bcryptjs')
 const User = require('../models/user')
 const helper = require('../utils/test_helper')
 
