@@ -4,10 +4,11 @@ import { createAnecdote } from '../reducers/anecdoteReducer'
 const AnecdoteForm = () => {
   const dispatch = useDispatch()
 
-  const submit = e => {
+  const submit = async e => {
     e.preventDefault()
-    dispatch(createAnecdote(e.target[0].value))
-    e.target[0].value = ''
+    const content = e.target.note.value
+    e.target.note.value = ''
+    dispatch(createAnecdote(content))
   }
 
   return (
@@ -15,7 +16,7 @@ const AnecdoteForm = () => {
       <h2>create new</h2>
       <form onSubmit={submit}>
         <div>
-          <input />
+          <input name='note' />
         </div>
         <button type='submit'>create</button>
       </form>
