@@ -22,6 +22,6 @@ export const setNotification = (message, timeout) => (
     dispatch(actions.setNotification(message))
     setTimeout(() => {
       dispatch(actions.clearNotification())
-    }, timeout);
+    }, timeout * 1000);
   }
 )
